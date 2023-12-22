@@ -1,0 +1,26 @@
+Date: Day of collection, DD/MM/YYYY format
+Plot: BioCON plot number
+Row: Row number (1-18)
+Column: Column number (1-18)
+Species: species abbreviation according to the following pairs 
+Achmi - Achillea millefolium, 
+Agrre - Agropyron repens, 
+Amoca - Amorpha canescens, 
+Andge - Andropogon gerardii, 
+Anecy - Anemone cylindrica, 
+Asctu - Asclepias tuberosa, 
+Bougr - Bouteloua gracilis, 
+Broin - Bromus inermis, 
+Koecr - Koeleria cristata, 
+Lesca - Lespedeza capitata, 
+Luppe - Lupinus perennis, 
+Petvi - Petalostemum villosum, 
+Poapr - Poa pratensis, 
+Schsc - Schizachyrium scoparium, 
+Solri - Solidago rigida, 
+Sornu - Sorghastrum nutans
+Coverage: Estimated percent cover of quadrat to nearest 5%
+Root: Is the plant rooted in this quadrat (R=yes, N=no)
+CO2Treatment: AC - ambient, EC - elevated CO2
+Ntreatment: AN - ambient, EN - elevated Nitrogen
+
