@@ -6,7 +6,7 @@ library('patchwork')
 
 bcdat <- read.csv('hi_res_SR16_biocon.csv')
 sr_bc_trt <- read.csv('sr_df.csv')
-load('perm_boot.Rdata')
+load('perm_boot.RData')
 plots <- unique(bcdat$Plot)
 plots <- plots[order(plots)]
 
@@ -203,6 +203,7 @@ lnn_plot <- function(line_model,conf_model,y_label,leg.pos='none'){
 }
 
 # data box plot
+#### Modify to plot three scales (0.09, 0.81, 3.24) #######
 bx_plot <- function(rich_met,indata,y_label){
     rich_met <- sym(rich_met)
     p <- ggplot() + geom_boxplot(aes(x=factor(patch.size),y=!!rich_met,fill=factor(treat)),
@@ -253,6 +254,49 @@ ggsave('figure2a.pdf',f1a)
 # average difference between control and a treatment
 # mean((xf[xf$treatment=="AC-AN","y"]-xf[xf$treatment=="EC-EN","y"])/xf[xf$treatment=="AC-AN","y"])
 
+bx_plot <- function(rich_met,indata,y_label){
+    rich_met <- sym(rich_met)
+    p <- ggplot() + geom_boxplot(aes(x=factor(patch.size),y=!!rich_met,fill=factor(treat)),
+                                data=indata) + 
+                   scale_fill_manual(values=c('black','green','grey','light green'))+
+                   labs(x=expression('Patch Size ['*m^2*']'),
+                        y=y_label) +
+                   theme(text = element_text(size=12),
+                         axis.text.x = element_text(size=8),
+                         panel.border = element_blank(),
+                         panel.grid.major = element_blank(),
+                         panel.grid.minor = element_blank(),
+                         panel.background = element_blank(),
+                         axis.line = element_line(colour = "black"))
+}
+
+## summary bar plot of three scales in conceptual figure
+col_plot <- function(inmodel,in_error,y_label) {
+    qual_cats <- inmodel[inmodel$x %in% c(0.09,0.81,last(inmodel$x)),]
+    qual_cats$x[qual_cats$x==0.09] <- 'Small Neighborhood'
+    qual_cats$x[qual_cats$x==0.81] <- 'Large Neighborhood'
+    qual_cats$x[qual_cats$x==last(qual_cats$x)] <- 'Community'
+    qual_cats$yl <- in_error[in_error$x %in% c(0.09,0.81,last(in_error$x)),'yl']
+    qual_cats$yh <- in_error[in_error$x %in% c(0.09,0.81,last(in_error$x)),'yh']
+
+    qual_cats$treatment <- factor(qual_cats$treatment)
+    qual_cats$x <- factor(qual_cats$x,
+                          levels=c('Small Neighborhood','Large Neighborhood','Community'))
+
+    dodge <- position_dodge(1)
+    p <- ggplot(qual_cats,aes(x=x,y=y,ymin=yl,ymax=yh,fill=treatment)) + 
+         geom_col(position=dodge) + geom_errorbar(position=dodge,width=0.25) +
+         scale_fill_manual(values=c('black','green','grey','light green')) +
+         labs(x='',y=y_label) +
+                   theme(text = element_text(size=12),
+                         axis.text.x = element_text(size=12),
+                         panel.border = element_blank(),
+                         panel.grid.major = element_blank(),
+                         panel.grid.minor = element_blank(),
+                         panel.background = element_blank(),
+                         axis.line = element_line(colour = "black"))
+}
+
 # Species Richness
 f2a <- lnn_plot(xf,xfq,paste0('Species Richness [',pres_cov,']'),c(0.75,0.25))
 f2b <- ln_plot(xf,xfq,1.5,10,'')
@@ -262,18 +306,30 @@ ggsave(paste0('figure2_',pres_cov,'.pdf'),f2,width=6.5,height=4,units="in")
 fs1a <- bx_plot('sr',sr_bc,'SR')
 fs2a <- bx_ln_plot(xf,xfq,'sr',sr_bc,'SR')
 
+pres_cov <- 'pres'
+fs2co <- col_plot(xf,xfq,'Species Richness')
+ggsave(paste0('figureS3CO_',pres_cov,'.pdf'),fs2co,width=7.5,height=4,units="in")
+
+
 ## Cover
 pres_cov <- 'cover'
 # Shannon Diversity
 f3ca <- ln_plot(xfH,xfqH,1,4.5,paste0("Shannon Div."),c(0.75,0.275))
+fs3coa <- col_plot(xfH,xfqH,'Shannon Diversity')
 # Simpson Index
 f3cb <- ln_plot(xfD,xfqD,1,4.5,paste0("Inv. Simpson"))
+fs3cob <- col_plot(xfD,xfqD,'Inv. Simpson Index')
 # Berger-Parker Index
 f3cc <- ln_plot(xfBP,xfqBP,1,4.5,paste0("Inv. Berger-Parker"))
+fs3coc <- col_plot(xfBP,xfqBP,'Inv. Berger-Parker Index')
 
 f3 <- f3ca + f3cb + f3cc + plot_annotation(tag_levels="a",tag_suffix=")") 
-
 ggsave('figure5.pdf',f3,width=8,height=4,units="in")
+
+f3 <- fs3coa / fs3cob / fs3coc + plot_annotation(tag_levels="a",tag_suffix=")") + 
+                                 plot_layout(guides='collect') 
+ggsave('figureS5_CO.pdf',f3,width=7.5,height=10,units="in")
+
 
 # Shannon Diversity
 fs1b <- bx_plot('H',sr_bc,"H")
@@ -330,9 +386,29 @@ f5b <- spc_comp(shrt_trt[1],cols[1],"")
 f5c <- spc_comp(shrt_trt[4],cols[4],paste0("Species Richness"))
 f5d <- spc_comp(shrt_trt[3],cols[3],"")
 
-f5 <- f5a + f5b + f5c + f5d + plot_annotation(tag_levels="a",tag_suffix=")") + plot_layout(guides="collect")
+f5 <- f5a + f5b + f5c + f5d + plot_annotation(tag_levels="a",tag_suffix=")") + 
+                              plot_layout(guides="collect")
 
 ggsave('figureSX.pdf',f5,width=6.5,height=6.5,units="in")
+
+## No Spatial Sorting dataframe
+big_boot_conf <- list()
+xfbq <- data.frame(treatment=NULL,x=NULL,y=NULL,yl=NULL,yh=NULL)
+#xend <- c(25,25,22.09,25) # need to accomodate different lengths
+for (i in seq(1,4)) {
+    x <- seq(0.01,3.24,.01)
+    xfb <- matrix(nrow=1000,ncol=length(x))
+    for (j in seq(1,1000)){
+        mc <- big_boot[[i]][j,]
+        y <- mc[1,1]*x^mc[1,2]
+        xfb[j,] <- y
+     }
+    big_boot_conf[[i]] <- xfb
+    tmp <- apply(big_boot_conf[[i]],2,quantile,probs=c(0.0275,0.5,0.975))
+    treat <- rep(shrt_trt[i],length(x))
+    df <- data.frame(treatment=treat,x=x,y=tmp[2,],yl=tmp[1,],yh=tmp[3,])
+    xfbq <- rbind(xfbq,df)
+}    
 
 sr_sp_diff <- list()
 x <- seq(0.01,3.24,.01)
@@ -363,13 +439,13 @@ sp_nosp_p <- ggplot() + geom_line(aes(x=x,y=y,color=treatment,linetype=treatment
                       panel.grid.minor = element_blank(),
                       panel.background = element_blank(),
                       axis.line = element_line(colour = "black"),
-                      legend.position=c(0.75,0.275))
+                      legend.position='none')
 
 sp_diff_p <- ggplot() + geom_line(aes(x=x,y=y,color=treatment,linetype=treatment),
                             data=sp_diff,linewidth=1) +
                 scale_color_manual(values=c('black','green','black','green'))+
                 scale_linetype_manual(values=c('solid','solid','dashed','dashed'))+
-                geom_ribbon(aes(x=x,ymin=yl,ymax=yh,color=treatment),data=sp_diff,alpha=0.1) +
+                geom_ribbon(aes(x=x,ymin=yl,ymax=yh,color=treatment,linetype=treatment),data=sp_diff,alpha=0.1) +
                 labs(x=expression('Patch Size ['*m^2*']'),
                      y='Species Gain, No Spatial Sorting') +
                 scale_x_log10()+scale_y_log10()+
@@ -381,11 +457,18 @@ sp_diff_p <- ggplot() + geom_line(aes(x=x,y=y,color=treatment,linetype=treatment
                       panel.grid.minor = element_blank(),
                       panel.background = element_blank(),
                       axis.line = element_line(colour = "black"),
-                      legend.position='none')
+                      legend.position=c(0.75,0.275))
 
 f3ns <- sp_nosp_p + sp_diff_p + plot_annotation(tag_levels="a",tag_suffix=")") 
 
-ggsave('figure3.pdf',f3ns,width=7.5,height=4,units="in")
+ggsave('figure4.pdf',f3ns,width=7.5,height=4,units="in")
+
+sp_nosp_co <- col_plot(xfbq,xfbq,'SR, no spatial sorting')
+sp_diff_co <- col_plot(sp_diff,sp_diff,'Species Gain, no spatial sorting')
+
+f3ns_co <- sp_nosp_co / sp_diff_co + plot_annotation(tag_levels="a",tag_suffix=")") +
+                                     plot_layout(guides="collect")
+ggsave('figS4CO.pdf',f3ns_co,width=7.5,height=8,units='in')
 
 ### append permuted plots and extend estimated sr to aggregate
 agg_plots_trt <- data.frame('patch.size'=NULL,'sr'=NULL,'treat'=NULL)
